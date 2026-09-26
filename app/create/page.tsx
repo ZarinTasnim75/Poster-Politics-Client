@@ -1,244 +1,305 @@
 "use client";
 
+import { useState, ChangeEvent, FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CreatePosterPage() {
-  const searchParams = useSearchParams();
+    const searchParams = useSearchParams();
+    const templateId = searchParams.get("templateId") || "default_template";
 
-  const templateId = searchParams.get("templateId");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string>("");
+    const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string>("");
 
-  return (
-    <main className="min-h-screen bg-[#F5EFE3] px-4 py-8 text-[#4F5B2A] sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-5xl">
+    const [formData, setFormData] = useState({
+        name: "",
+        designation: "",
+        party: "",
+        location: "",
+        occasion: "",
+        headline: "",
+    });
 
-        <div className="mb-8 text-center">
-          <h1 className="font-serif text-3xl font-bold tracking-tight text-[#4F5B2A] sm:text-4xl">
-            Create Your Poster
-          </h1>
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#4F5B2A]/80 sm:text-base">
-            Provide your poster information, add photos, and generate a
-            ready-to-use political poster.
-          </p>
-        </div>
+    const handleInputChange = (
+        e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
-        <div className="mb-6 rounded-2xl border border-[#D8C9A8] bg-white/80 p-5 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#B8892D]">
-                Selected Template
-              </p>
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setSelectedFiles(Array.from(e.target.files));
+        }
+    };
 
-              <p className="mt-1 break-all text-sm font-medium text-[#4F5B2A]">
-                {templateId || "No template selected"}
-              </p>
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+
+        try {
+            const token = localStorage.getItem("token");
+
+            // 1. Upload photos first (if any selected)
+            let photoUrls: string[] = [];
+            if (selectedFiles.length > 0) {
+                const uploadData = new FormData();
+                selectedFiles.forEach((file) => uploadData.append("photos", file));
+
+                const uploadRes = await fetch("http://localhost:5000/api/uploads", {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: uploadData,
+                });
+
+                const uploadJson = await uploadRes.json();
+                if (uploadJson.urls) {
+                    photoUrls = uploadJson.urls;
+                }
+            }
+
+            // 2. Submit poster request to backend
+            const response = await fetch("http://localhost:5000/api/posters", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    templateId,
+                    ...formData,
+                    photoUrls,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to generate poster");
+            }
+
+            // 3. Set generated poster image URL to preview
+            setGeneratedPosterUrl(data.data.generatedImageUrl);
+        } catch (err) {
+            const errorMessage =
+                err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <main className="min-h-screen bg-[#F5EFE3] px-4 py-8 text-[#4F5B2A] sm:px-6 lg:px-10">
+            <div className="mx-auto max-w-5xl">
+
+                <div className="mb-8 text-center">
+                    <h1 className="font-serif text-3xl font-bold tracking-tight text-[#4F5B2A] sm:text-4xl">
+                        Create Your Poster
+                    </h1>
+                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#4F5B2A]/80 sm:text-base">
+                        Provide your poster information, add photos, and generate a ready-to-use political poster.
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-100 p-4 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
+                {generatedPosterUrl ? (
+                    <div className="rounded-3xl border border-[#D8C9A8] bg-white p-6 text-center shadow-md">
+                        <h2 className="mb-4 font-serif text-2xl font-bold text-[#4F5B2A]">
+                            Your Poster is Ready!
+                        </h2>
+                        <div className="mx-auto mb-6 max-w-md overflow-hidden rounded-2xl border border-[#D8C9A8] shadow-lg">
+                            <img
+                                src={generatedPosterUrl}
+                                alt="Generated Poster"
+                                className="h-auto w-full"
+                            />
+                        </div>
+                        <div className="flex justify-center gap-4">
+                            <a
+                                href={generatedPosterUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                download="poster.png"
+                                className="rounded-xl bg-[#4F5B2A] px-6 py-3 text-sm font-bold text-[#F5EFE3] hover:bg-[#B8892D]"
+                            >
+                                Download Poster
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setGeneratedPosterUrl("")}
+                                className="rounded-xl border border-[#D8C9A8] bg-[#F5EFE3] px-6 py-3 text-sm font-bold text-[#4F5B2A] hover:bg-[#D8C9A8]/40"
+                            >
+                                Create Another
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <form
+                        onSubmit={handleSubmit}
+                        className="rounded-3xl border border-[#D8C9A8] bg-white p-5 shadow-sm sm:p-8"
+                    >
+                        <div className="mb-8">
+                            <div className="mb-5">
+                                <h2 className="font-serif text-xl font-bold text-[#4F5B2A]">
+                                    Personal Information
+                                </h2>
+                            </div>
+
+                            <div className="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Name
+                                    </label>
+                                    <input
+                                        required
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter full name"
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Designation
+                                    </label>
+                                    <input
+                                        required
+                                        type="text"
+                                        name="designation"
+                                        value={formData.designation}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. Committee Member"
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Party / Organization
+                                    </label>
+                                    <select
+                                        required
+                                        name="party"
+                                        value={formData.party}
+                                        onChange={handleInputChange}
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    >
+                                        <option value="" disabled>
+                                            দল / সংগঠন নির্বাচন করুন
+                                        </option>
+                                        <option value="বাংলাদেশ জাতীয়তাবাদী দল (বিএনপি)">বাংলাদেশ জাতীয়তাবাদী দল (বিএনপি)</option>
+                                        <option value="বাংলাদেশ ছাত্রদল">বাংলাদেশ ছাত্রদল</option>
+                                        <option value="বাংলাদেশ জামায়াতে ইসলামী">বাংলাদেশ জামায়াতে ইসলামী</option>
+                                        <option value="বাংলাদেশ ইসলামী ছাত্রশিবির">বাংলাদেশ ইসলামী ছাত্রশিবির</option>
+                                        <option value="জাতীয় পার্টি">জাতীয় পার্টি</option>
+                                        <option value="অন্যান্য / স্বতন্ত্র">অন্যান্য / স্বতন্ত্র</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Union / Thana / District
+                                    </label>
+                                    <input
+                                        required
+                                        type="text"
+                                        name="location"
+                                        value={formData.location}
+                                        onChange={handleInputChange}
+                                        placeholder="Enter location"
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-8 border-t border-[#D8C9A8]/60 pt-8">
+                            <div className="mb-5">
+                                <h2 className="font-serif text-xl font-bold text-[#4F5B2A]">
+                                    Poster Information
+                                </h2>
+                            </div>
+
+                            <div className="grid gap-5">
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Occasion
+                                    </label>
+                                    <select
+                                        required
+                                        name="occasion"
+                                        value={formData.occasion}
+                                        onChange={handleInputChange}
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    >
+                                        <option value="" disabled>
+                                            Select an occasion
+                                        </option>
+                                        <option value="victory-day">Victory Day</option>
+                                        <option value="condolence">Condolence </option>
+                                        <option value="campaign">Publicity</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
+                                        Bangla Headline
+                                    </label>
+                                    <textarea
+                                        required
+                                        name="headline"
+                                        rows={4}
+                                        value={formData.headline}
+                                        onChange={handleInputChange}
+                                        placeholder="Write the main Bangla headline for your poster..."
+                                        className="w-full resize-none rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-8 border-t border-[#D8C9A8]/60 pt-8">
+                            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D8C9A8] bg-[#F5EFE3]/50 px-5 py-8 text-center hover:border-[#B8892D]">
+                                <p className="text-sm font-semibold text-[#4F5B2A]">
+                                    {selectedFiles.length > 0
+                                        ? `${selectedFiles.length} file(s) selected`
+                                        : "Click to upload leader photo(s)"}
+                                </p>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="border-t border-[#D8C9A8]/60 pt-6">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full rounded-xl bg-[#4F5B2A] px-6 py-3.5 text-sm font-bold text-[#F5EFE3] shadow-md transition hover:bg-[#B8892D] disabled:opacity-50"
+                            >
+                                {loading ? "Generating Poster via AI..." : "Generate Poster"}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
-
-            <div className="rounded-full border border-[#D8C9A8] bg-[#D8C9A8]/30 px-4 py-1.5 text-xs font-semibold text-[#4F5B2A]">
-              Template Selected
-            </div>
-          </div>
-        </div>
-
-
-        <form className="rounded-3xl border border-[#D8C9A8] bg-white p-5 shadow-sm sm:p-8">
-
-          <div className="mb-8">
-            <div className="mb-5">
-              <h2 className="font-serif text-xl font-bold text-[#4F5B2A]">
-                Personal Information
-              </h2>
-
-              <p className="mt-1 text-sm text-[#4F5B2A]/70">
-                Enter the information that will appear on the poster.
-              </p>
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-
-              <div>
-                <label
-                  htmlFor="name"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Name
-                </label>
-
-                <input
-                  id="name"
-                  type="text"
-                  name="name"
-                  placeholder="Enter full name"
-                  className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition placeholder:text-[#4F5B2A]/40 focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="designation"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Designation
-                </label>
-
-                <input
-                  id="designation"
-                  type="text"
-                  name="designation"
-                  placeholder="e.g. Committee Member"
-                  className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition placeholder:text-[#4F5B2A]/40 focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="party"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Party / Organization
-                </label>
-
-                <input
-                  id="party"
-                  type="text"
-                  name="party"
-                  placeholder="Enter organization name"
-                  className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition placeholder:text-[#4F5B2A]/40 focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="location"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Union / Thana / District
-                </label>
-
-                <input
-                  id="location"
-                  type="text"
-                  name="location"
-                  placeholder="Enter location"
-                  className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition placeholder:text-[#4F5B2A]/40 focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8 border-t border-[#D8C9A8]/60 pt-8">
-            <div className="mb-5">
-              <h2 className="font-serif text-xl font-bold text-[#4F5B2A]">
-                Poster Information
-              </h2>
-
-              <p className="mt-1 text-sm text-[#4F5B2A]/70">
-                Choose the occasion and enter the main poster message.
-              </p>
-            </div>
-
-            <div className="grid gap-5">
-
-              <div>
-                <label
-                  htmlFor="occasion"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Occasion
-                </label>
-
-                <select
-                  id="occasion"
-                  name="occasion"
-                  defaultValue=""
-                  className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                >
-                  <option value="" disabled>
-                    Select an occasion
-                  </option>
-                  <option value="victory-day">Victory Day</option>
-                  <option value="condolence">
-                    Condolence & Tribute
-                  </option>
-                  <option value="campaign">Publicity</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="headline"
-                  className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
-                >
-                  Bangla Headline
-                </label>
-
-                <textarea
-                  id="headline"
-                  name="headline"
-                  rows={5}
-                  placeholder="Write the main Bangla headline for your poster..."
-                  className="w-full resize-none rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition placeholder:text-[#4F5B2A]/40 focus:border-[#B8892D] focus:bg-white focus:ring-4 focus:ring-[#B8892D]/15"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8 border-t border-[#D8C9A8]/60 pt-8">
-            <div className="mb-5">
-              <h2 className="font-serif text-xl font-bold text-[#4F5B2A]">
-                Add Photos
-              </h2>
-
-              <p className="mt-1 text-sm text-[#4F5B2A]/70">
-                Upload up to 3 photos. JPG, PNG, and WEBP are supported.
-              </p>
-            </div>
-
-            <label
-              htmlFor="photos"
-              className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D8C9A8] bg-[#F5EFE3]/50 px-5 py-10 text-center transition hover:border-[#B8892D] hover:bg-[#D8C9A8]/20"
-            >
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#D8C9A8] bg-white text-2xl shadow-sm text-[#4F5B2A]">
-                📷
-              </div>
-
-              <p className="text-sm font-semibold text-[#4F5B2A]">
-                Click to upload photos
-              </p>
-
-              <p className="mt-1 text-xs text-[#4F5B2A]/70">
-                Maximum 3 photos · 5 MB each
-              </p>
-
-              <span className="mt-4 rounded-lg bg-[#4F5B2A] px-4 py-2 text-xs font-semibold text-[#F5EFE3] transition hover:bg-[#B8892D]">
-                Choose Photos
-              </span>
-
-              <input
-                id="photos"
-                type="file"
-                name="photos"
-                accept="image/*"
-                multiple
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          <div className="border-t border-[#D8C9A8]/60 pt-6">
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-[#4F5B2A] px-6 py-3.5 text-sm font-bold text-[#F5EFE3] shadow-md transition hover:bg-[#B8892D] hover:shadow-lg active:scale-[0.99] sm:text-base"
-            >
-              Generate Poster
-            </button>
-
-            <p className="mt-3 text-center text-xs text-[#4F5B2A]/70">
-              Your poster will be generated using the selected template and
-              provided information.
-            </p>
-          </div>
-        </form>
-      </div>
-    </main>
-  );
+        </main>
+    );
 }
