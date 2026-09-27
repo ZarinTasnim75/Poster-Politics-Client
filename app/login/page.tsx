@@ -39,15 +39,15 @@ export default function LoginPage() {
         throw new Error(data.message || "Invalid credentials");
       }
 
-     if (data.token && data.user) {
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.token && data.user) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
 
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect");
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get("redirect");
 
-    window.location.href = redirect || "/";
-}
+        window.location.href = redirect || "/";
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error
