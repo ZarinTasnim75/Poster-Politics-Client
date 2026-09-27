@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function CreatePosterPage() {
     const searchParams = useSearchParams();
     const templateIdFromUrl = searchParams.get("templateId");
+    const router = useRouter();
+
+    useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        const currentPath = `${window.location.pathname}${window.location.search}`;
+        router.replace(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    }
+}, [router]);
 
     interface Template {
         _id: string;

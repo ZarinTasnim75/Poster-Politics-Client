@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const router = useRouter();
+  // const router = useRouter();
+  // const searchParams = useSearchParams();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -18,16 +19,19 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: identifier,
-          password: password,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: identifier,
+            password: password,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -35,16 +39,21 @@ export default function LoginPage() {
         throw new Error(data.message || "Invalid credentials");
       }
 
-      if (data.token && data.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
+     if (data.token && data.user) {
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
 
-        window.location.href = "/";
-      }
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
 
+    window.location.href = redirect || "/";
+}
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to log in. Please try again.";
+        err instanceof Error
+          ? err.message
+          : "Failed to log in. Please try again.";
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -54,12 +63,11 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#F5EFE3] px-4 py-12 text-[#4F5B2A]">
       <div className="w-full max-w-md">
-
         <div className="mb-8 text-center">
-
           <h1 className="mt-4 font-serif text-2xl font-bold tracking-tight text-[#4F5B2A]">
             Welcome Back
           </h1>
+
           <p className="mt-1 text-sm text-[#4F5B2A]/70">
             Sign in to create and manage your political posters
           </p>
@@ -73,7 +81,6 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
             <div>
               <label
                 htmlFor="identifier"
@@ -81,6 +88,7 @@ export default function LoginPage() {
               >
                 Email
               </label>
+
               <input
                 id="identifier"
                 type="text"
@@ -101,6 +109,7 @@ export default function LoginPage() {
                   Password
                 </label>
               </div>
+
               <input
                 id="password"
                 type="password"
@@ -120,6 +129,7 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
+
           <div className="mt-6 border-t border-[#D8C9A8]/60 pt-6 text-center text-xs text-[#4F5B2A]/80">
             Don't have an account yet?{" "}
             <Link

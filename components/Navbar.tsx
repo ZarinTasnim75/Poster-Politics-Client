@@ -155,7 +155,6 @@ export default function Navbar() {
               {profileOpen && (
                 <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl border border-[#D8C9A8] bg-[#F5EFE3] shadow-lg">
 
-                  {/* User Info */}
                   <div className="border-b border-[#D8C9A8]/60 px-4 py-3">
                     <p className="truncate text-sm font-bold text-[#4F5B2A]">
                       {user.name}
