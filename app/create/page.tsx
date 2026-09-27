@@ -44,9 +44,7 @@ export default function CreatePosterPage() {
     useEffect(() => {
         const fetchTemplates = async () => {
             try {
-                const response = await fetch(
-                    "http://localhost:5000/api/templates"
-                );
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/templates`);
 
                 const data = await response.json();
 
@@ -149,7 +147,7 @@ export default function CreatePosterPage() {
                 const uploadData = new FormData();
                 selectedFiles.forEach((file) => uploadData.append("photos", file));
 
-                const uploadRes = await fetch("http://localhost:5000/api/uploads", {
+                const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/uploads`, {
                     method: "POST",
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -163,7 +161,7 @@ export default function CreatePosterPage() {
                 }
             }
 
-            const response = await fetch("http://localhost:5000/api/posters", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posters`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

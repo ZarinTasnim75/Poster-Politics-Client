@@ -27,7 +27,7 @@ export default function TemplatesPage() {
     const fetchTemplates = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/templates"
+          `${process.env.NEXT_PUBLIC_API_URL}/api/templates`
         );
 
         const data = await response.json();

@@ -69,7 +69,7 @@ export default function ProfilePage() {
                 }
 
                 const response = await fetch(
-                    `http://localhost:5000/api/posters/user/${userId}`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/posters/user/${userId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -113,7 +113,7 @@ export default function ProfilePage() {
             setDeletingId(posterId);
 
             const response = await fetch(
-                `http://localhost:5000/api/posters/${posterId}`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/posters/${posterId}`,
                 {
                     method: "DELETE",
                     headers: {
