@@ -1,11 +1,30 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CreatePosterPage() {
     const searchParams = useSearchParams();
-    const templateId = searchParams.get("templateId") || "default_template";
+    const templateIdFromUrl = searchParams.get("templateId");
+
+    interface Template {
+        _id: string;
+        title: string;
+        occasionType: string;
+        thumbnailUrl: string;
+        layoutConfig: {
+            photoSlots: number;
+            photoArrangement: string;
+            headlinePosition: string;
+            footerPosition: string;
+            theme: string;
+        };
+    }
+
+    const [templates, setTemplates] = useState<Template[]>([]);
+    const [templateId, setTemplateId] = useState(templateIdFromUrl || "");
+    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [remainingTrials, setRemainingTrials] = useState(0);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
@@ -22,6 +41,47 @@ export default function CreatePosterPage() {
 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                const response = await fetch(
+                    "http://localhost:5000/api/templates"
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || "Failed to load templates");
+                }
+
+                setTemplates(data.templates || []);
+
+                // If user came from the Templates page
+                if (templateIdFromUrl) {
+                    const template = data.templates.find(
+                        (item: Template) => item._id === templateIdFromUrl
+                    );
+
+                    if (template) {
+                        setSelectedTemplate(template);
+
+                        setFormData((prev) => ({
+                            ...prev,
+                            occasion: template.occasionType,
+                        }));
+
+                        setRemainingTrials(template.layoutConfig.photoSlots);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load templates:", error);
+                setError("Failed to load templates");
+            }
+        };
+
+        fetchTemplates();
+    }, [templateIdFromUrl]);
+
     const handleInputChange = (
         e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
@@ -29,9 +89,22 @@ export default function CreatePosterPage() {
     };
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setSelectedFiles(Array.from(e.target.files));
+        if (!e.target.files || !selectedTemplate) return;
+
+        const files = Array.from(e.target.files);
+        const maxPhotos = selectedTemplate.layoutConfig.photoSlots;
+
+        if (files.length > maxPhotos) {
+            setError(
+                `This template supports a maximum of ${maxPhotos} photo(s).`
+            );
+
+            setSelectedFiles(files.slice(0, maxPhotos));
+            return;
         }
+
+        setError("");
+        setSelectedFiles(files);
     };
 
     const handleSubmit = async (e: FormEvent) => {
@@ -39,10 +112,38 @@ export default function CreatePosterPage() {
         setLoading(true);
         setError("");
 
+        if (!templateId) {
+            setError("Please select a template.");
+            setLoading(false);
+            return;
+        }
+
+        if (!selectedTemplate) {
+            setError("Please select a valid template.");
+            setLoading(false);
+            return;
+        }
+
+        if (remainingTrials <= 0) {
+            setError("You have no trials remaining for this template.");
+            setLoading(false);
+            return;
+        }
+
+        if (
+            selectedFiles.length >
+            selectedTemplate.layoutConfig.photoSlots
+        ) {
+            setError(
+                `This template supports a maximum of ${selectedTemplate.layoutConfig.photoSlots} photo(s).`
+            );
+            setLoading(false);
+            return;
+        }
+
         try {
             const token = localStorage.getItem("token");
 
-            // 1. Upload photos first (if any selected)
             let photoUrls: string[] = [];
             if (selectedFiles.length > 0) {
                 const uploadData = new FormData();
@@ -62,7 +163,6 @@ export default function CreatePosterPage() {
                 }
             }
 
-            // 2. Submit poster request to backend
             const response = await fetch("http://localhost:5000/api/posters", {
                 method: "POST",
                 headers: {
@@ -82,8 +182,9 @@ export default function CreatePosterPage() {
                 throw new Error(data.message || "Failed to generate poster");
             }
 
-            // 3. Set generated poster image URL to preview
             setGeneratedPosterUrl(data.data.generatedImageUrl);
+
+            setRemainingTrials((prev) => Math.max(prev - 1, 0));
         } catch (err) {
             const errorMessage =
                 err instanceof Error ? err.message : "An unexpected error occurred";
@@ -234,24 +335,68 @@ export default function CreatePosterPage() {
                             </div>
 
                             <div className="grid gap-5">
+
                                 <div>
-                                    <label className="mb-2 block text-sm font-semibold text-[#4F5B2A]">
-                                        Occasion
+                                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                        Template
                                     </label>
+
                                     <select
-                                        required
-                                        name="occasion"
-                                        value={formData.occasion}
-                                        onChange={handleInputChange}
-                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#F5EFE3]/30 px-4 py-3 text-sm text-[#4F5B2A] outline-none transition focus:border-[#B8892D]"
+                                        value={templateId}
+                                        onChange={(e) => {
+                                            const selectedId = e.target.value;
+
+                                            setTemplateId(selectedId);
+
+                                            const template = templates.find(
+                                                (item) => item._id === selectedId
+                                            );
+
+                                            setSelectedTemplate(template || null);
+
+                                            if (template) {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    occasion: template.occasionType,
+                                                }));
+
+                                                setRemainingTrials(template.layoutConfig.photoSlots);
+                                            } else {
+                                                setRemainingTrials(0);
+                                            }
+                                        }}
+                                        className="w-full rounded-xl border border-[#D8C9A8] bg-[#FDFBF7] px-4 py-3 text-sm text-gray-700 outline-none transition focus:border-[#4F5B2A] focus:ring-2 focus:ring-[#4F5B2A]/10"
                                     >
-                                        <option value="" disabled>
-                                            Select an occasion
-                                        </option>
-                                        <option value="victory-day">Victory Day</option>
-                                        <option value="condolence">Condolence </option>
-                                        <option value="campaign">Publicity</option>
+                                        <option value="">Select a template</option>
+
+                                        {templates.map((template) => (
+                                            <option
+                                                key={template._id}
+                                                value={template._id}
+                                            >
+                                                {template.title}
+                                            </option>
+                                        ))}
                                     </select>
+
+                                    {selectedTemplate && (
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            {selectedTemplate.layoutConfig.photoSlots} photo slot(s)
+                                        </p>
+                                    )}
+                                    {selectedTemplate && (
+                                        <div className="mt-3 rounded-xl bg-[#F5EFE3] px-4 py-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-[#4F5B2A]">
+                                                    Remaining trials
+                                                </span>
+
+                                                <span className="font-bold text-[#B8892D]">
+                                                    {remainingTrials}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -272,17 +417,30 @@ export default function CreatePosterPage() {
                         </div>
 
                         <div className="mb-8 border-t border-[#D8C9A8]/60 pt-8">
-                            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#D8C9A8] bg-[#F5EFE3]/50 px-5 py-8 text-center hover:border-[#B8892D]">
+                            <label
+                                className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-8 text-center ${!selectedTemplate || remainingTrials <= 0
+                                        ? "cursor-not-allowed border-gray-200 bg-gray-100"
+                                        : "cursor-pointer border-[#D8C9A8] bg-[#F5EFE3]/50 hover:border-[#B8892D]"
+                                    }`}
+                            >
                                 <p className="text-sm font-semibold text-[#4F5B2A]">
                                     {selectedFiles.length > 0
-                                        ? `${selectedFiles.length} file(s) selected`
+                                        ? `${selectedFiles.length} photo(s) selected`
                                         : "Click to upload leader photo(s)"}
                                 </p>
+
+                                {selectedTemplate && (
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        Maximum {selectedTemplate.layoutConfig.photoSlots} photo(s)
+                                    </p>
+                                )}
+
                                 <input
                                     type="file"
                                     accept="image/*"
                                     multiple
                                     onChange={handleFileChange}
+                                    disabled={!selectedTemplate || remainingTrials <= 0}
                                     className="hidden"
                                 />
                             </label>
@@ -291,10 +449,14 @@ export default function CreatePosterPage() {
                         <div className="border-t border-[#D8C9A8]/60 pt-6">
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || !templateId || remainingTrials <= 0}
                                 className="w-full rounded-xl bg-[#4F5B2A] px-6 py-3.5 text-sm font-bold text-[#F5EFE3] shadow-md transition hover:bg-[#B8892D] disabled:opacity-50"
                             >
-                                {loading ? "Generating Poster via AI..." : "Generate Poster"}
+                                {loading
+                                    ? "Generating Poster via AI..."
+                                    : remainingTrials <= 0
+                                        ? "No Trials Remaining"
+                                        : "Generate Poster"}
                             </button>
                         </div>
                     </form>

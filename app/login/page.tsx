@@ -7,54 +7,56 @@ import Link from "next/link";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [identifier, setIdentifier] = useState(""); 
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  try {
-    const response = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: identifier, 
-        password: password,
-      }),
-    });
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: identifier,
+          password: password,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.message || "Invalid credentials");
+      if (!response.ok) {
+        throw new Error(data.message || "Invalid credentials");
+      }
+
+      if (data.token && data.user) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        window.location.href = "/";
+      }
+
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to log in. Please try again.";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    router.push("/create");
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Failed to log in. Please try again.";
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#F5EFE3] px-4 py-12 text-[#4F5B2A]">
       <div className="w-full max-w-md">
 
         <div className="mb-8 text-center">
-        
+
           <h1 className="mt-4 font-serif text-2xl font-bold tracking-tight text-[#4F5B2A]">
             Welcome Back
           </h1>
@@ -77,7 +79,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 htmlFor="identifier"
                 className="mb-2 block text-sm font-semibold text-[#4F5B2A]"
               >
-                Email 
+                Email
               </label>
               <input
                 id="identifier"
