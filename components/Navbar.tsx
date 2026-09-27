@@ -7,7 +7,6 @@ const navLinks = [
   { name: "Home", href: "/" },
   { name: "Templates", href: "/templates" },
   { name: "Create Poster", href: "/create" },
-  { name: "History", href: "/history" },
 ];
 
 type User = {
@@ -175,14 +174,6 @@ export default function Navbar() {
                     Profile
                   </Link>
 
-                  <Link
-                    href="/history"
-                    onClick={() => setProfileOpen(false)}
-                    className="block px-4 py-3 text-sm font-medium text-[#4F5B2A] transition hover:bg-[#D8C9A8]/30 hover:text-[#B8892D]"
-                  >
-                    My History
-                  </Link>
-
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -308,14 +299,6 @@ export default function Navbar() {
                   className="rounded-lg px-4 py-2.5 text-sm font-medium text-[#4F5B2A] hover:bg-[#D8C9A8]/30 hover:text-[#B8892D]"
                 >
                   Profile
-                </Link>
-
-                <Link
-                  href="/history"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-lg px-4 py-2.5 text-sm font-medium text-[#4F5B2A] hover:bg-[#D8C9A8]/30 hover:text-[#B8892D]"
-                >
-                  My History
                 </Link>
 
                 <button

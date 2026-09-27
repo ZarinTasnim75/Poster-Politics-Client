@@ -52,7 +52,7 @@ export default function TemplatesPage() {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center bg-[#F5EFE3] p-6 text-[#4F5B2A]">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#D8C9A8] border-t-[#4F5B2A]" />
-        <p className="mt-4 font-medium text-sm">Loading templates...</p>
+        <p className="mt-4 text-sm font-medium">Loading templates...</p>
       </div>
     );
   }
@@ -62,6 +62,7 @@ export default function TemplatesPage() {
       <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center bg-[#F5EFE3] p-6">
         <div className="max-w-md rounded-2xl border border-[#D8C9A8] bg-[#F5EFE3]/90 p-6 text-center shadow-sm">
           <p className="font-semibold text-red-700">{error}</p>
+
           <button
             onClick={() => window.location.reload()}
             className="mt-4 rounded-lg bg-[#4F5B2A] px-4 py-2 text-xs font-semibold text-[#F5EFE3] transition hover:bg-[#B8892D]"
@@ -76,20 +77,24 @@ export default function TemplatesPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#F5EFE3] px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
+
         {/* Header Section */}
         <div className="mb-10 text-center sm:text-left">
           <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#D8C9A8]/60 bg-[#D8C9A8]/20 px-3 py-1">
             <span className="h-1.5 w-1.5 rounded-full bg-[#B8892D]" />
+
             <span className="text-[10px] font-semibold uppercase tracking-widest text-[#B8892D]">
               Poster Design Gallery
             </span>
           </div>
-          
+
           <h1 className="font-serif text-3xl font-bold tracking-tight text-[#4F5B2A] sm:text-4xl">
             Choose a Template
           </h1>
-          <p className="mt-2 text-sm text-[#4F5B2A]/80 max-w-2xl">
-            Select a poster template to jumpstart your design project in our AI Studio.
+
+          <p className="mt-2 max-w-2xl text-sm text-[#4F5B2A]/80">
+            Select a poster template to jumpstart your design project in our
+            AI Studio.
           </p>
         </div>
 
@@ -105,57 +110,81 @@ export default function TemplatesPage() {
             {templates.map((template) => (
               <div
                 key={template._id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-[#D8C9A8]/60 bg-[#F5EFE3]/60 shadow-sm backdrop-blur-sm transition-all hover:border-[#D8C9A8] hover:shadow-md"
+                className="group flex flex-col rounded-2xl border border-[#D8C9A8]/60 bg-[#F5EFE3]/60 p-5 shadow-sm backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-[#D8C9A8] hover:shadow-md"
               >
-                {/* Thumbnail Preview Area */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#D8C9A8]/30">
-                  {template.thumbnailUrl ? (
-                    <img
-                      src={template.thumbnailUrl}
-                      alt={template.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                {/* Template Icon */}
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#D8C9A8]/30 text-[#4F5B2A] transition-colors group-hover:bg-[#B8892D]/15 group-hover:text-[#B8892D]">
+                  <svg
+                    className="h-7 w-7"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"
                     />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[#4F5B2A]/40">
-                      <svg
-                        className="h-12 w-12"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                  )}
-
-                  {/* Occasion Badge */}
-                  <span className="absolute right-3 top-3 rounded-full border border-[#D8C9A8]/60 bg-[#F5EFE3]/90 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[#4F5B2A] backdrop-blur-sm">
-                    {template.occasionType}
-                  </span>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 7h8M8 11h8M8 15h5"
+                    />
+                  </svg>
                 </div>
 
-                {/* Template Info & Action */}
-                <div className="flex flex-1 flex-col justify-between p-5">
+                {/* Template Info */}
+                <div className="mt-5 flex flex-1 flex-col justify-between">
                   <div>
-                    <h2 className="font-serif text-lg font-bold text-[#4F5B2A] transition-colors group-hover:text-[#B8892D]">
+                    {/* Occasion */}
+                    <span className="inline-flex rounded-full border border-[#D8C9A8]/60 bg-[#D8C9A8]/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#B8892D]">
+                      {template.occasionType}
+                    </span>
+
+                    {/* Title */}
+                    <h2 className="mt-3 font-serif text-lg font-bold text-[#4F5B2A] transition-colors group-hover:text-[#B8892D]">
                       {template.title}
                     </h2>
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="inline-flex items-center rounded-md bg-[#D8C9A8]/40 px-2.5 py-0.5 text-xs font-medium text-[#4F5B2A]">
-                        {template.layoutConfig.photoSlots}{" "}
-                        {template.layoutConfig.photoSlots === 1
-                          ? "Photo Slot"
-                          : "Photo Slots"}
-                      </span>
+                    {/* Template Details */}
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between rounded-lg bg-[#D8C9A8]/20 px-3 py-2">
+                        <span className="text-xs text-[#4F5B2A]/65">
+                          Photo Slots
+                        </span>
+
+                        <span className="text-xs font-semibold text-[#4F5B2A]">
+                          {template.layoutConfig.photoSlots}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg bg-[#D8C9A8]/20 px-3 py-2">
+                        <span className="text-xs text-[#4F5B2A]/65">
+                          Layout
+                        </span>
+
+                        <span className="max-w-[130px] truncate text-xs font-semibold capitalize text-[#4F5B2A]">
+                          {template.layoutConfig.photoArrangement.replace(
+                            /-/g,
+                            " "
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg bg-[#D8C9A8]/20 px-3 py-2">
+                        <span className="text-xs text-[#4F5B2A]/65">
+                          Theme
+                        </span>
+
+                        <span className="max-w-[130px] truncate text-xs font-semibold capitalize text-[#4F5B2A]">
+                          {template.layoutConfig.theme.replace(/-/g, " ")}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Select Button */}
                   <button
                     onClick={() =>
                       router.push(`/create?templateId=${template._id}`)
